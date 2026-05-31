@@ -1,0 +1,8 @@
+__pycache__/
+*.py[cod]
+.venv/
+data/raw/*.csv
+data/processed/*.csv
+data/processed/*.png
+results/*.csv
+results/*.png
