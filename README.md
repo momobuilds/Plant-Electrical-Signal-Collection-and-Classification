@@ -1,8 +1,9 @@
 # Plant Electrical Signal Collection and Classification
 
 This project records plant electrical signals from an AD8232 module and an
-Arduino UNO, builds non-overlapping 15-second samples, extracts statistical
-features, and trains baseline machine-learning classifiers.
+Arduino UNO, classic Nano, or Nano ESP32, builds non-overlapping 15-second
+samples, extracts statistical features, and trains baseline machine-learning
+classifiers.
 
 The workflow is inspired by the 2025 paper
 [Classifying plant electrical signals in response to external stimuli using machine learning for enhanced agricultural sustainability](https://www.tandfonline.com/doi/full/10.1080/27685241.2025.2534470).
@@ -24,11 +25,14 @@ this repository is deliberately limited to plant electrophysiology.
 │       └── plant_signal_acquisition.ino
 ├── scripts/
 │   ├── log_serial.py
+│   ├── generate_synthetic_data.py
 │   ├── create_dataset.py
 │   └── train_models.py
 ├── data/
 │   ├── raw/
-│   └── processed/
+│   ├── processed/
+│   ├── synthetic_raw/
+│   └── synthetic_processed/
 ├── results/
 ├── requirements.txt
 └── README.md
@@ -55,6 +59,20 @@ readings.
 Keep electrode placement consistent across recordings. The referenced paper
 attached electrodes to plant leaves and recorded the watered condition
 30 minutes after watering, rather than while pouring water.
+
+### Nano Boards
+
+For a classic ATmega328P Nano or Nano ESP32, use the same labeled pins:
+`3V3`, `GND`, `A0`, `D10`, and `D11`. Do not power the AD8232 from `5V` or
+`VBUS`.
+
+The sketch detects Nano ESP32 builds automatically. The Nano ESP32 does not
+provide the AVR `analogReference()` API, so the sketch uses its 12-bit ADC and
+the Arduino-ESP32 calibrated millivolt conversion. Select **By Arduino pin
+(default)** under **Tools > Pin Numbering** when using a Nano ESP32.
+
+The classic Nano follows the UNO's AVR path: `DEFAULT` is nominally 5 V and
+`analogRead()` returns values from `0` through `1023`.
 
 ## ADC Reference Voltage
 
@@ -102,7 +120,7 @@ single-supply device according to the
 1. Open
    `arduino/plant_signal_acquisition/plant_signal_acquisition.ino`
    in the Arduino IDE.
-2. Select **Arduino UNO** and the correct serial port.
+2. Select your exact Arduino board and the correct serial port.
 3. Upload the sketch.
 
 The sketch samples at 100 Hz, uses a rollover-safe `micros()` scheduler, and
@@ -147,7 +165,7 @@ Record each requested condition for 30 minutes:
 ```bash
 python scripts/log_serial.py --port /dev/cu.usbmodem1101 --baud 115200 --label dry --plant-id P1 --run-id run1 --duration-min 30 --output-dir data/raw
 python scripts/log_serial.py --port /dev/cu.usbmodem1101 --baud 115200 --label sunlight --plant-id P1 --run-id run1 --duration-min 30 --output-dir data/raw
-python scripts/log_serial.py --port /dev/cu.usbmodem1101 --baud 115200 --label dark --plant-id P1 --run-id run1 --duration-min 30 --output-dir data/raw
+
 python scripts/log_serial.py --port /dev/cu.usbmodem1101 --baud 115200 --label watered --plant-id P1 --run-id run1 --duration-min 30 --output-dir data/raw
 python scripts/log_serial.py --port /dev/cu.usbmodem1101 --baud 115200 --label cutting --plant-id P1 --run-id run1 --duration-min 30 --output-dir data/raw
 ```
@@ -164,6 +182,34 @@ The logger:
 - Ignores malformed serial rows without stopping.
 - Flushes data periodically and preserves partial recordings after `Ctrl+C`.
 - Warns if more than 10% of saved rows report lead-off.
+
+## Generate Synthetic Demo Data
+
+Create logger-compatible synthetic recordings when you want to test the
+pipeline without waiting for real plant measurements:
+
+```bash
+python scripts/generate_synthetic_data.py
+```
+
+The default command writes one 3-minute recording for each label to
+`data/synthetic_raw`. These generated files are deliberately separated from
+`data/raw` and must not be treated as experimental results.
+
+Build and train against the synthetic demo data:
+
+```bash
+python scripts/create_dataset.py --input-dir data/synthetic_raw --output-dir data/synthetic_processed --sampling-rate 100
+python scripts/train_models.py --input-csv data/synthetic_processed/feature_dataset.csv --output-dir results/synthetic_demo
+```
+
+Use `--overwrite` to regenerate existing synthetic files. Additional options
+can change the duration, number of runs, random seed, and injected lead-off
+ratio:
+
+```bash
+python scripts/generate_synthetic_data.py --runs-per-label 2 --duration-min 5 --lead-off-ratio 0.02 --overwrite
+```
 
 ## Build Datasets
 
@@ -233,6 +279,7 @@ later evaluate held-out plants or held-out runs.
 
 ```bash
 python scripts/log_serial.py --help
+python scripts/generate_synthetic_data.py --help
 python scripts/create_dataset.py --help
 python scripts/train_models.py --help
 ```

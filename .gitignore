@@ -1,8 +1,14 @@
 __pycache__/
 *.py[cod]
+.DS_Store
 .venv/
 data/raw/*.csv
 data/processed/*.csv
 data/processed/*.png
+data/synthetic_raw/*.csv
+data/synthetic_processed/*.csv
+data/synthetic_processed/*.png
 results/*.csv
 results/*.png
+results/**/*.csv
+results/**/*.png
