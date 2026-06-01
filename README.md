@@ -1,7 +1,7 @@
 # Plant Electrical Signal Collection and Classification
 
 This project records plant electrical signals from an AD8232 module and an
-Arduino UNO, classic Nano, or Nano ESP32, builds non-overlapping 15-second
+Arduino UNO, Nano ESP32, builds non-overlapping 15-second
 samples, extracts statistical features, and trains baseline machine-learning
 classifiers.
 
